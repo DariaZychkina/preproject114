@@ -12,133 +12,80 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class UserDaoJDBCImpl implements UserDao {
-    private Connection conn = null;
+    private Connection conn = getConn();
+    private final String CREATE_DB = "CREATE TABLE IF NOT EXISTS Users (Id BIGINT PRIMARY KEY AUTO_INCREMENT, Name VARCHAR(20), Lastname VARCHAR(20), Age TINYINT)";
+    private final String DROP_DB = "DROP TABLE Users";
+    private final String INSERT_DB = "INSERT INTO Users(Name, Lastname, Age) VALUES(?,?,?)";
+    private final String REMOVEUSER_DB = "DELETE FROM Users WHERE Id = ?";
+    private final String GET_DB = "SELECT * FROM Users";
+    private final String DELETE_DB = "DELETE FROM Users";
 
-    public UserDaoJDBCImpl() { }
 
-    public void createUsersTable() {
-        PreparedStatement createTab = null;
-        try {
-            conn = Util.getMySQLConnection();
+    public UserDaoJDBCImpl() {
+    }
+
+    public void createUsersTable() throws SQLException {
+        try (Statement createTab = conn.createStatement()) {
             conn.setAutoCommit(false);
-            createTab = conn.prepareStatement("CREATE TABLE IF NOT EXISTS Users (Id BIGINT PRIMARY KEY AUTO_INCREMENT, Name VARCHAR(20), Lastname VARCHAR(20), Age TINYINT)");
-            createTab.executeUpdate();
+            createTab.executeUpdate(CREATE_DB);
             conn.commit();
-        } catch (SQLException | ClassNotFoundException e) {
-            System.out.println(e.getMessage());
-            try {//не понимаю, как тут без вложенных проверок, если методы их требуют
-                if (conn != null ) {
-                    conn.rollback();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            conn.rollback();
         } finally {
-            try {
-                if (createTab != null) {
-                    createTab.close();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+            conn.setAutoCommit(false);
         }
     }
 
-    public void dropUsersTable() {
-        PreparedStatement dropTable = null;
-        try {
-            conn = Util.getMySQLConnection();
+    public void dropUsersTable() throws SQLException {
+        try (Statement dropTable = conn.createStatement()){
             conn.setAutoCommit(false);
-            dropTable = conn.prepareStatement("DROP TABLE Users");
-            dropTable.executeUpdate();
+            dropTable.executeUpdate(DROP_DB);
             conn.commit();
-        } catch (SQLException | ClassNotFoundException e) {
-            System.out.println(e.getMessage());
-            try {       //и тут
-                if (conn != null ) {
-                    conn.rollback();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            conn.rollback();
         } finally {
-            try {
-                if (dropTable != null) {
-                    dropTable.close();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+            conn.setAutoCommit(false);
         }
     }
 
-    public void saveUser(String name, String lastName, byte age) {
-        PreparedStatement savingUser = null;
-        try {
-            conn = Util.getMySQLConnection();
+    public void saveUser(String name, String lastName, byte age) throws SQLException {
+        try (PreparedStatement savingUser = conn.prepareStatement(INSERT_DB)) {
             conn.setAutoCommit(false);
-            savingUser = conn.prepareStatement("INSERT INTO Users(Name, Lastname, Age) VALUES(?,?,?)");
             savingUser.setString(1, name);
             savingUser.setString(2, lastName);
             savingUser.setByte(3, age);
             savingUser.executeUpdate();
+            System.out.println("User с именем – " + name + " добавлен в базу данных");
             conn.commit();
-        } catch (SQLException | ClassNotFoundException e) {
-            System.out.println(e.getMessage());
-            try { //и вот тут еще
-                if (conn != null ) {
-                    conn.rollback();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            conn.rollback();
+            throw new SQLException();
         } finally {
-            try {
-                if (savingUser != null) {
-                    savingUser.close();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+            conn.setAutoCommit(true);
         }
     }
 
-    public void removeUserById(long id) {
-        PreparedStatement remUser = null;
-        try {
-            conn = Util.getMySQLConnection();
+    public void removeUserById(long id) throws SQLException {
+        try (PreparedStatement remUser = conn.prepareStatement(REMOVEUSER_DB)){
             conn.setAutoCommit(false);
-            remUser = conn.prepareStatement("DELETE FROM Users WHERE Id = ?");
             remUser.setLong(1, id);
             remUser.executeUpdate();
             conn.commit();
-        } catch (SQLException | ClassNotFoundException e) {
-            System.out.println(e.getMessage());
-            try {  //кхм, да-да и тут
-                if (conn != null ) {
-                    conn.rollback();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            conn.rollback();
         } finally {
-            try {
-                if (remUser != null) {
-                    remUser.close();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+            conn.setAutoCommit(false);
         }
     }
 
-    public List<User> getAllUsers() {
+    public List<User> getAllUsers() throws SQLException {
         List<User> users = new LinkedList<>();
-        PreparedStatement getUsers = null;
-        try {
-            conn = Util.getMySQLConnection();
+        try (PreparedStatement getUsers = conn.prepareStatement(GET_DB)) {
             conn.setAutoCommit(false);
-            getUsers = conn.prepareStatement("SELECT * FROM Users");
             ResultSet rs = getUsers.executeQuery();
             while (rs.next()) {
                 User user = new User();
@@ -149,51 +96,34 @@ public class UserDaoJDBCImpl implements UserDao {
                 users.add(user);
             }
             conn.commit();
-        } catch (SQLException | ClassNotFoundException e) {
-            try {
-                if (conn != null ) {
-                    conn.rollback();
-                }
-            } catch (SQLException excep) {
-                throw new SQLException();
-            }
-        } finally { //везде в общем + нет возможности использовать try с ресурсами, тк нужен rollback, который происходит при исключении, но при try с ресурсами коннекта, конечно, видно не будет
-            try {
-                if (getUsers != null) {
-                    getUsers.close();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            conn.rollback();
+        } finally {
+            conn.setAutoCommit(false);
             return users;
         }
     }
 
-    public void cleanUsersTable() {
-        PreparedStatement cleanTab = null;
-        try {
-            conn = Util.getMySQLConnection();
+    public void cleanUsersTable() throws SQLException{
+        try (PreparedStatement  cleanTab = conn.prepareStatement(DELETE_DB );) {
             conn.setAutoCommit(false);
-            cleanTab = conn.prepareStatement("DELETE FROM Users");
             cleanTab.executeUpdate();
             conn.commit();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            conn.rollback();
+        } finally {
+            conn.setAutoCommit(false);
+        }
+    }
+
+    public Connection getConn() {
+        try {
+            return  Util.getMySQLConnection();
         } catch (SQLException | ClassNotFoundException e) {
             System.out.println(e.getMessage());
-            try {
-                if (conn != null ) {
-                    conn.rollback();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
-        } finally {
-            try {
-                if (cleanTab != null) {
-                    cleanTab.close();
-                }
-            } catch (SQLException excep) {
-                System.out.println(excep.getMessage());
-            }
+            return null;
         }
     }
 }
