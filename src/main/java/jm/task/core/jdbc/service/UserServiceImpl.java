@@ -12,26 +12,52 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
     UserDaoJDBCImpl daoJDBC = new UserDaoJDBCImpl();
     public void createUsersTable() {
-        daoJDBC.createUsersTable();
+        try {
+            daoJDBC.createUsersTable();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
     }
 
     public void dropUsersTable() {
-        daoJDBC.dropUsersTable();
+        try {
+            daoJDBC.dropUsersTable();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public void saveUser(String name, String lastName, byte age) {
-        daoJDBC.saveUser(name, lastName, age);
+        try {
+            daoJDBC.saveUser(name, lastName, age);
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public void removeUserById(long id) {
-        daoJDBC.removeUserById(id);
+        try {
+            daoJDBC.removeUserById(id);
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public List<User> getAllUsers() {
-       return daoJDBC.getAllUsers();
+        try {
+            return daoJDBC.getAllUsers();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
     }
 
     public void cleanUsersTable() {
-        daoJDBC.cleanUsersTable();
+        try {
+            daoJDBC.cleanUsersTable();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 }
